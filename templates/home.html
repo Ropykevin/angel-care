@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- HERO SECTION -->
+<section class="hero-section">
+
+    <div class="hero-overlay">
+
+        <div class="container">
+
+            <div class="hero-content">
+
+                <h1>
+                    Quality Pediatric Healthcare You Can Trust
+                </h1>
+
+                <p>
+                    Specialized child healthcare, developmental assessments,
+                    immunization services and pediatric consultations.
+                </p>
+
+                <div class="mt-4">
+
+                    <a href="/book" class="btn btn-success btn-lg me-3">
+
+                        Book Appointment
+
+                    </a>
+
+                    <a href="https://wa.me/254728611073" target="_blank" class="btn btn-light btn-lg">
+
+                        <i class="fab fa-whatsapp"></i>
+                        WhatsApp Us
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- STATISTICS -->
+<section class="stats-section">
+
+    <div class="container">
+
+        <div class="row text-center">
+
+            <div class="col-md-3">
+                <h2>5000+</h2>
+                <p>Children Served</p>
+            </div>
+
+            <div class="col-md-3">
+                <h2>10+</h2>
+                <p>Years Experience</p>
+            </div>
+
+            <div class="col-md-3">
+                <h2>24/7</h2>
+                <p>Support</p>
+            </div>
+
+            <div class="col-md-3">
+                <h2>100%</h2>
+                <p>Patient Focused</p>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ABOUT -->
+<section id="about" class="container py-5">
+
+    <div class="row align-items-center">
+
+        <div class="col-lg-6">
+
+            <img src="{{ url_for('static', filename='images/angel-photo5.jpeg') }}" class="img-fluid rounded shadow">
+
+        </div>
+
+        <div class="col-lg-6">
+
+            <h2 class="text-primary fw-bold">
+                About Angel Care Pediatric Hospital
+            </h2>
+
+            <p>
+                Angel Care Pediatric Hospital provides quality child healthcare
+                services with compassion, professionalism and innovation.
+            </p>
+
+            <h5>Vision</h5>
+
+            <p>
+                To be a leading healthcare facility in the region and beyond.
+            </p>
+
+            <h5>Mission</h5>
+
+            <p>
+                To provide quality preventive, curative and rehabilitative
+                healthcare services.
+            </p>
+
+            <h5>Core Values</h5>
+
+            <ul>
+                <li>Integrity</li>
+                <li>Professionalism</li>
+                <li>Innovation</li>
+                <li>Patient Satisfaction</li>
+            </ul>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- DOCTOR PROFILE -->
+<section class="container py-5">
+
+    <div class="text-center mb-5">
+
+        <h2 class="fw-bold text-primary">
+            Meet Our Pediatric Specialist
+        </h2>
+
+    </div>
+
+    <div class="row align-items-center">
+
+        <div class="col-lg-4">
+
+            <img src="{{ url_for('static', filename='images/angel-photo.jpeg') }}" class="img-fluid rounded shadow">
+
+        </div>
+
+        <div class="col-lg-8">
+
+            <h4>
+                Clinical Pediatric & Child Health Specialist
+            </h4>
+
+            <p>
+                Dedicated pediatric specialist passionate about improving
+                child healthcare and developmental support services.
+            </p>
+
+            <ul>
+
+                <li>Higher National Diploma in Pediatrics & Child Health</li>
+
+                <li>Diploma in Clinical Medicine & Surgery</li>
+
+                <li>Diploma in Community Health & Development</li>
+
+                <li>Certified Generic Instructor Candidate & Facility Mentor by NEST360</li>
+
+                <li>Early Childhood Development Champion</li>
+
+                <li>PET1 / PET2 / PET3 Certified</li>
+
+            </ul>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- SERVICES -->
+<section id="services" class="container py-5">
+
+    <div class="text-center mb-5">
+
+        <h2 class="fw-bold text-primary">
+            Our Services
+        </h2>
+
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-md-4">
+            <div class="service-card">🩺 General Pediatric Consultation</div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="service-card">🧠 Neurologist Clinics</div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="service-card">🧩 ADHD / Autism Management</div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="service-card">💉 Immunization Services</div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="service-card">🍎 Nutrition Clinic</div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="service-card">👂 ENT Clinic</div>
+        </div>
+
+    </div>
+
+</section>
+
+<section id="gallery" class="py-5 bg-light">
+
+    <div class="container">
+
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-primary">Hospital Gallery</h2>
+            <p class="text-muted">
+                Moments from our hospital, community outreach programs and healthcare services.
+            </p>
+        </div>
+
+        <div class="row g-4">
+
+            <div class="col-md-4">
+                <img src="{{ url_for('static', filename='images/angel-photo2.jpeg') }}" class="gallery-img">
+            </div>
+
+            <div class="col-md-4">
+                <img src="{{ url_for('static', filename='images/angel-photo3.jpeg') }}" class="gallery-img portrait">
+            </div>
+
+            <div class="col-md-4">
+                <img src="{{ url_for('static', filename='images/angel-photo7.jpeg') }}" class="gallery-img">
+            </div>
+
+            <div class="col-md-6">
+                <img src="{{ url_for('static', filename='images/angel-photo8.jpeg') }}" class="gallery-img">
+            </div>
+
+            <div class="col-md-6">
+                <img src="{{ url_for('static', filename='images/angel-photo9.jpeg') }}" class="gallery-img">
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- WHY CHOOSE US -->
+<section class="container py-5">
+
+    <div class="text-center mb-5">
+
+        <h2 class="fw-bold text-primary">
+            Why Choose Us
+        </h2>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-md-4">
+
+            <div class="card p-4 shadow">
+                Experienced Pediatric Specialist
+            </div>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <div class="card p-4 shadow">
+                Child Friendly Environment
+            </div>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <div class="card p-4 shadow">
+                Affordable Services
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="container py-5">
+
+    <div class="text-center mb-5">
+
+        <h2 class="fw-bold text-primary">
+            What Parents Say
+        </h2>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-md-6">
+
+            <div class="card p-4 shadow">
+
+                <h5>★★★★★</h5>
+
+                <p>
+                    Excellent pediatric care and friendly staff.
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="col-md-6">
+
+            <div class="card p-4 shadow">
+
+                <h5>★★★★★</h5>
+
+                <p>
+                    Professional and caring services for children.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- CONTACT -->
+<section id="contact" class="bg-primary text-white text-center py-5">
+
+    <div class="container">
+
+        <h2>Ready to Book an Appointment?</h2>
+
+        <p>
+            Contact us today for professional pediatric healthcare.
+        </p>
+
+        <a href="/book" class="btn btn-light btn-lg">
+
+            Book Appointment
+
+        </a>
+
+    </div>
+
+</section>
+
+{% endblock %}

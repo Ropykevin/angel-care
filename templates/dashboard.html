@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h3 class="mb-4">Dashboard</h3>
+
+<!-- SEARCH -->
+<form method="GET" class="mb-3">
+    <input type="text" name="search" class="form-control shadow-sm" placeholder="🔍 Search patient..."
+        value="{{ request.args.get('search', '') }}">
+</form>
+
+<!-- STATS -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm p-3 text-center">
+            <h6>Total Appointments</h6>
+            <h3>{{ appointments|length }}</h3>
+        </div>
+    </div>
+</div>
+
+<!-- TABLE -->
+<div class="card shadow-sm">
+    <div class="card-body">
+
+        <table class="table table-bordered mt-3">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Patient</th>
+                    <th>Date</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for a in appointments %}
+                <tr>
+                    <td>{{ a.id }}</td>
+                    <td>{{ a.patient.full_name }}</td>
+
+                    <!-- FORMAT DATE -->
+                    <td>{{ a.appointment_date.strftime('%d %b %Y, %H:%M') }}</td>
+
+                    <td>{{ a.reason }}</td>
+
+                    <!-- STATUS BADGE -->
+                    <td>
+                        <span class="badge bg-{{ 'success' if a.status == 'completed' else 'warning' }}">
+                            {{ a.status }}
+                        </span>
+                    </td>
+
+                    <!-- ACTION BUTTONS -->
+                    <td>
+                        <!-- EDIT -->
+                        <a href="/update/{{ a.id }}" class="btn btn-warning btn-sm">
+                            Edit
+                        </a>
+
+                        <!-- COMPLETE (FIXED) -->
+                        <a href="/complete/{{ a.id }}" class="btn btn-success btn-sm"
+                            onclick="return confirm('Mark this appointment as completed?')">
+                            ✔
+                        </a>
+
+                        <!-- DELETE -->
+                        <a href="/delete/{{ a.id }}" class="btn btn-danger btn-sm"
+                            onclick="return confirm('Delete this appointment?')">
+                            🗑
+                        </a>
+
+                        <!-- RECORDS -->
+                        <a href="/records/{{ a.patient_id }}" class="btn btn-info btn-sm">
+                            Records
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

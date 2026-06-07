@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <!-- Back Button -->
+    <a href="/dashboard" class="btn btn-outline-secondary mb-3">← Back to Dashboard</a>
+
+    <div class="card shadow-lg p-4">
+        <h3 class="mb-4 text-center">Update Appointment</h3>
+
+        <form method="POST">
+
+            <!-- Patient Name -->
+            <div class="mb-3">
+                <label class="form-label">Patient Name</label>
+                <input type="text" class="form-control" value="{{ appointment.patient.full_name }}" readonly>
+            </div>
+
+            <!-- Appointment Date -->
+            <div class="mb-3">
+                <label class="form-label">Appointment Date</label>
+                <input type="datetime-local" class="form-control" name="date" value="{{ formatted_date }}" required>
+            </div>
+
+            <!-- Reason -->
+            <div class="mb-3">
+                <label class="form-label">Reason</label>
+                <textarea class="form-control" name="reason" rows="3">{{ appointment.reason }}</textarea>
+            </div>
+
+            <!-- Status -->
+            <div class="mb-3">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status">
+                    <option value="pending" {% if appointment.status == 'pending' %}selected{% endif %}>
+                        Pending
+                    </option>
+                    <option value="completed" {% if appointment.status == 'completed' %}selected{% endif %}>
+                        Completed
+                    </option>
+                </select>
+            </div>
+
+            <!-- Submit -->
+            <div class="text-end">
+                <button type="submit" class="btn btn-primary">
+                    Update Appointment
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+{% endblock %}

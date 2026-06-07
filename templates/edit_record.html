@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <!-- Back Button -->
+    <a href="/records/{{ record.patient_id }}" class="btn btn-outline-secondary mb-3">← Back to Records</a>
+
+    <div class="card shadow-lg p-4">
+        <h3 class="mb-4 text-center">Edit Medical Record</h3>
+
+        <form method="POST">
+
+            <!-- Diagnosis -->
+            <div class="mb-3">
+                <label class="form-label">Diagnosis</label>
+                <input class="form-control" name="diagnosis" value="{{ record.diagnosis }}" required>
+            </div>
+
+            <!-- Treatment -->
+            <div class="mb-3">
+                <label class="form-label">Treatment</label>
+                <input class="form-control" name="treatment" value="{{ record.treatment }}" required>
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-3">
+                <label class="form-label">Notes</label>
+                <textarea class="form-control" name="notes" rows="3">{{ record.notes }}</textarea>
+            </div>
+
+            <!-- Buttons -->
+            <div class="d-flex justify-content-between">
+                <a href="/records/{{ record.patient_id }}" class="btn btn-secondary">Back</a>
+                <button class="btn btn-primary">Update Record</button>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+{% endblock %}
