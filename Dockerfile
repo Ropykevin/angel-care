@@ -3,7 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev gcc \
+    libpq-dev gcc curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -13,13 +13,12 @@ COPY wsgi.py run.py ./
 COPY app ./app
 COPY migrations ./migrations
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
-RUN chmod +x docker/entrypoint.sh \
-    && mkdir -p app/static/images app/static/uploads/logos app/static/uploads/resumes app/static/uploads/jobs
+RUN chmod +x docker/entrypoint.sh
 
 ENV FLASK_APP=run.py \
     PYTHONUNBUFFERED=1 \
     FLASK_ENV=production
 
-EXPOSE 5000
+EXPOSE 5052
 
 ENTRYPOINT ["sh", "docker/entrypoint.sh"]

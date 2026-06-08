@@ -2,11 +2,11 @@
 # One-time VPS setup: PostgreSQL + host Nginx reverse proxy (+ optional SSL).
 #
 # Usage:
-#   cp .env.example .env && nano .env   # set POSTGRES_USER=claid, POSTGRES_PASSWORD
+#   cp .env.example .env && nano .env
 #   sudo bash mypostgresql.sh
 #   sudo INSTALL_SSL=true bash mypostgresql.sh
 #
-# Then set DATABASE_URL in .env (or run: python3 scripts/print_database_url.py)
+# Then deploy: bash deployment.sh
 
 if [ -z "${BASH_VERSION:-}" ]; then
   exec bash "$0" "$@"
@@ -33,8 +33,8 @@ load_dotenv .env
 
 POSTGRES_HOST="${POSTGRES_HOST:-localhost}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
-APP_PORT="${APP_PORT:-5050}"
-EMAIL="${CERTBOT_EMAIL:-${EMAIL:-${COMPANY_EMAIL:-admin@example.com}}}"
+APP_PORT="${APP_PORT:-5052}"
+EMAIL="${CERTBOT_EMAIL:-${EMAIL:-admin@example.com}}"
 NGINX_CONF="/etc/nginx/sites-available/${DOMAIN}"
 ESCAPED_PASS="${POSTGRES_PASSWORD//\'/\'\'}"
 
@@ -47,29 +47,25 @@ echo "==> Ensuring PostgreSQL is installed..."
 export DEBIAN_FRONTEND=noninteractive
 if ! command -v psql >/dev/null 2>&1; then
   apt-get update -qq
-  apt-get install -y postgresql postgresql-contrib
+  apt-get install -y postgresql postgresql-contrib nginx
 fi
-systemctl enable postgresql
+systemctl enable postgresql nginx
 systemctl start postgresql
 
 PG_CONF="$(find /etc/postgresql -name postgresql.conf 2>/dev/null | head -1)"
 PG_HBA="$(find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1)"
 
 if [[ -n "${PG_CONF}" ]]; then
-  echo "==> Configuring PostgreSQL to accept Docker connections..."
-  sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" "${PG_CONF}" || true
-  if ! grep -q "^listen_addresses = '\*'" "${PG_CONF}"; then
-    echo "listen_addresses = '*'" >> "${PG_CONF}"
-  fi
+  echo "==> Configuring PostgreSQL to accept local connections..."
+  sed -i "s/#listen_addresses = 'localhost'/listen_addresses = 'localhost'/" "${PG_CONF}" || true
 fi
 
 if [[ -n "${PG_HBA}" ]]; then
-  if ! grep -q "# claid docker" "${PG_HBA}"; then
+  if ! grep -q "# pediatric docker" "${PG_HBA}"; then
     cat >> "${PG_HBA}" <<'HBA'
 
-# claid docker
-host    all             all             172.16.0.0/12           scram-sha-256
-host    all             all             172.17.0.0/16           scram-sha-256
+# pediatric docker (host network)
+host    all             all             127.0.0.1/32            scram-sha-256
 HBA
   fi
 fi
@@ -100,6 +96,12 @@ GRANT ALL ON SCHEMA public TO ${POSTGRES_USER};
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${POSTGRES_USER};
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${POSTGRES_USER};
 SQL
+
+if [[ -f "${ROOT}/migrations/init.sql" ]]; then
+  echo "==> Applying migrations/init.sql..."
+  PGPASSWORD="${POSTGRES_PASSWORD}" psql -h 127.0.0.1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
+    -f "${ROOT}/migrations/init.sql"
+fi
 
 echo "==> Testing login as ${POSTGRES_USER}..."
 PGPASSWORD="${POSTGRES_PASSWORD}" psql -h 127.0.0.1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "SELECT 1;" >/dev/null

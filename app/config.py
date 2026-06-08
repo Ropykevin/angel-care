@@ -8,7 +8,7 @@ load_dotenv()
 def get_database_uri():
     url = os.environ.get(
         'DATABASE_URL',
-        'postgresql://postgres:1234@localhost/pediatric_clinic',
+        'postgresql://pediatric:password@localhost:5432/pediatric',
     )
     if url.startswith('postgres://'):
         url = url.replace('postgres://', 'postgresql://', 1)

@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    container_name: claid
+    container_name: pediatric_clinic
     restart: unless-stopped
     network_mode: host
     env_file:
@@ -9,8 +9,3 @@ services:
       - .env.docker-runtime
     environment:
       FLASK_ENV: production
-    volumes:
-      - uploads_data:/app/app/static/uploads
-
-volumes:
-  uploads_data:

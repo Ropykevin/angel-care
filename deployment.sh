@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Repeatable app deploy — run after: sudo bash scripts/reset_claid_db_user.sh
+# Repeatable app deploy — run after: sudo bash scripts/reset_pediatric_db_user.sh
 #
 # Usage (on the VPS):
 #   bash deployment.sh
@@ -25,11 +25,13 @@ command -v python3 >/dev/null 2>&1 || { echo "python3 is required." >&2; exit 1;
 source "${ROOT}/scripts/load_dotenv.sh"
 load_dotenv .env
 
+APP_PORT="${APP_PORT:-5052}"
+
 echo "==> Pre-flight: testing Postgres on host..."
 if ! PGPASSWORD="${POSTGRES_PASSWORD}" psql -h 127.0.0.1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "SELECT 1;" >/dev/null 2>&1; then
   echo "ERROR: Cannot log in to Postgres as ${POSTGRES_USER} on 127.0.0.1" >&2
   echo "Fix the database first:" >&2
-  echo "  sudo bash scripts/reset_claid_db_user.sh" >&2
+  echo "  sudo bash scripts/reset_pediatric_db_user.sh" >&2
   exit 1
 fi
 echo "Postgres login OK."
@@ -42,22 +44,22 @@ fi
 echo "==> Syncing DATABASE_URL for Docker..."
 python3 scripts/sync_database_url.py
 
-echo "==> Building and starting container (host network, port ${APP_PORT:-5050})..."
+echo "==> Building and starting container (host network, port ${APP_PORT})..."
 docker compose build
 docker compose up -d --force-recreate --remove-orphans
 
 echo "==> Waiting for app to start..."
 OK=0
 for _ in $(seq 1 60); do
-  STATUS="$(docker inspect -f '{{.State.Status}}' claid 2>/dev/null || echo missing)"
+  STATUS="$(docker inspect -f '{{.State.Status}}' pediatric_clinic 2>/dev/null || echo missing)"
   if [[ "${STATUS}" == "restarting" ]]; then
     echo "Container is crash-looping. Recent logs:" >&2
     docker compose logs --tail=50 web >&2 || true
     echo "" >&2
-    echo "Run: sudo bash scripts/reset_claid_db_user.sh && bash deployment.sh" >&2
+    echo "Run: sudo bash scripts/reset_pediatric_db_user.sh && bash deployment.sh" >&2
     exit 1
   fi
-  if curl -fsS "http://127.0.0.1:${APP_PORT:-5050}/" >/dev/null 2>&1; then
+  if curl -fsS "http://127.0.0.1:${APP_PORT}/healthz" >/dev/null 2>&1; then
     OK=1
     break
   fi
@@ -65,7 +67,7 @@ for _ in $(seq 1 60); do
 done
 
 if [[ "${OK}" -ne 1 ]]; then
-  echo "App did not respond on port ${APP_PORT:-5050}. Recent logs:" >&2
+  echo "App did not respond on port ${APP_PORT}. Recent logs:" >&2
   docker compose logs --tail=50 web >&2 || true
   exit 1
 fi
@@ -74,6 +76,6 @@ echo ""
 echo "Deploy complete."
 docker compose ps
 echo ""
-echo "  App (local) : http://127.0.0.1:${APP_PORT:-5050}"
+echo "  App (local) : http://127.0.0.1:${APP_PORT}"
 echo "  Site        : http://${DOMAIN:-your-domain}"
 echo "  Logs        : docker compose logs -f web"
