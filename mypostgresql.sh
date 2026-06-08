@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+INIT_SQL="${SCRIPT_DIR}/docker/init.sql"
 DB_NAME="${POSTGRES_DB:-pediatric_clinic}"
 DB_USER="${POSTGRES_USER:-pediatric_clinic_user}"
 DB_PASSWORD="${POSTGRES_PASSWORD:-1234}"
@@ -16,7 +17,7 @@ usage() {
     echo "Usage: $0 {start|init|stop|status}"
     echo ""
     echo "  start   Start PostgreSQL container and initialize schema"
-    echo "  init    Initialize database and apply init.sql"
+    echo "  init    Initialize database and apply docker/init.sql"
     echo "  stop    Stop PostgreSQL container"
     echo "  status  Check PostgreSQL connection status"
     exit 1
@@ -67,11 +68,11 @@ create_database() {
 }
 
 apply_schema() {
-    echo "Applying schema from init.sql..."
+    echo "Applying schema from docker/init.sql..."
     if db_container_running; then
-        docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < "${SCRIPT_DIR}/init.sql"
+        docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < "$INIT_SQL"
     else
-        run_psql -d "$DB_NAME" -f "${SCRIPT_DIR}/init.sql"
+        run_psql -d "$DB_NAME" -f "$INIT_SQL"
     fi
     echo "Schema applied successfully."
 }
@@ -102,19 +103,9 @@ check_status() {
 }
 
 case "${1:-}" in
-    start)
-        start_db
-        ;;
-    init)
-        init_db
-        ;;
-    stop)
-        stop_db
-        ;;
-    status)
-        check_status
-        ;;
-    *)
-        usage
-        ;;
+    start) start_db ;;
+    init) init_db ;;
+    stop) stop_db ;;
+    status) check_status ;;
+    *) usage ;;
 esac

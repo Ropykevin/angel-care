@@ -10,8 +10,8 @@ PROD_MODE=0
 
 if [ "${1:-}" = "prod" ]; then
     PROD_MODE=1
-    COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.prod.yml)
-    export COMPOSE_FILE="docker-compose.yml:docker-compose.prod.yml"
+    COMPOSE_FILES=(-f docker-compose.yml -f docker/docker-compose.prod.yml)
+    export COMPOSE_FILE="docker-compose.yml:docker/docker-compose.prod.yml"
     shift
 fi
 
@@ -46,11 +46,11 @@ deploy() {
     ensure_env
     check_dependencies
 
-    chmod +x postgresql.sh
+    chmod +x mypostgresql.sh
 
     log "Starting PostgreSQL..."
     docker compose "${COMPOSE_FILES[@]}" up -d db
-    ./postgresql.sh start
+    ./mypostgresql.sh start
 
     log "Building application image..."
     docker compose "${COMPOSE_FILES[@]}" build web
@@ -69,7 +69,7 @@ deploy() {
             log "Deployment complete."
             if [ "$PROD_MODE" -eq 1 ]; then
                 log "Application (local): http://127.0.0.1:${APP_PORT}"
-                log "Configure Nginx with deploy/nginx.conf for public access."
+                log "Configure Nginx with docker/nginx.conf for public access."
             else
                 log "Application: http://localhost:${APP_PORT}"
             fi
@@ -106,19 +106,9 @@ usage() {
 }
 
 case "${1:-deploy}" in
-    deploy)
-        deploy
-        ;;
-    stop)
-        stop
-        ;;
-    restart)
-        restart
-        ;;
-    logs)
-        logs
-        ;;
-    *)
-        usage
-        ;;
+    deploy) deploy ;;
+    stop) stop ;;
+    restart) restart ;;
+    logs) logs ;;
+    *) usage ;;
 esac

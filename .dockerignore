@@ -1,0 +1,17 @@
+.env
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.git/
+.gitignore
+instance/
+tests/
+scripts/
+*.md
+docker-compose*.yml
+deploy/
+vps-deploy.sh
+postgresql.sh
