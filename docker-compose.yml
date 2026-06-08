@@ -1,47 +1,16 @@
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: pediatric_clinic_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-pediatric_clinic_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pediatric_clinic_password}
-      POSTGRES_DB: ${POSTGRES_DB:-pediatric_clinic}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pediatric_clinic_user} -d ${POSTGRES_DB:-pediatric_clinic}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: pediatric_clinic_web:latest
-    container_name: pediatric_clinic_web
+    build: .
+    container_name: claid
     restart: unless-stopped
-    ports:
-      - "${APP_PORT:-5052}:5052"
+    network_mode: host
     env_file:
       - .env
+      - .env.docker-runtime
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-pediatric_clinic_user}:${POSTGRES_PASSWORD:-pediatric_clinic_password}@db:5432/${POSTGRES_DB:-pediatric_clinic}
-      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5052/healthz >/dev/null || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 45s
+      FLASK_ENV: production
+    volumes:
+      - uploads_data:/app/app/static/uploads
 
 volumes:
-  postgres_data:
+  uploads_data:

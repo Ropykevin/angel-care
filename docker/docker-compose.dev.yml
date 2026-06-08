@@ -1,0 +1,7 @@
+# Optional local dev override — exposes Postgres on host port 5433 (avoids conflict with system Postgres on 5432)
+# Usage: docker compose -f docker-compose.yml -f docker/docker-compose.dev.yml up -d
+
+services:
+  db:
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"

@@ -1,111 +1,157 @@
 #!/usr/bin/env bash
+# One-time VPS setup: PostgreSQL + host Nginx reverse proxy (+ optional SSL).
+#
+# Usage:
+#   cp .env.example .env && nano .env   # set POSTGRES_USER=claid, POSTGRES_PASSWORD
+#   sudo bash mypostgresql.sh
+#   sudo INSTALL_SSL=true bash mypostgresql.sh
+#
+# Then set DATABASE_URL in .env (or run: python3 scripts/print_database_url.py)
+
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
+
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${ROOT}"
 
-INIT_SQL="${SCRIPT_DIR}/docker/init.sql"
-DB_NAME="${POSTGRES_DB:-pediatric_clinic}"
-DB_USER="${POSTGRES_USER:-pediatric_clinic_user}"
-DB_PASSWORD="${POSTGRES_PASSWORD:-1234}"
-DB_HOST="${POSTGRES_HOST:-localhost}"
-DB_PORT="${POSTGRES_PORT:-5432}"
+if [[ ! -f .env ]]; then
+  echo "Missing .env — copy from .env.example and edit values first." >&2
+  exit 1
+fi
 
-export PGPASSWORD="$DB_PASSWORD"
+# shellcheck disable=SC1091
+source "${ROOT}/scripts/load_dotenv.sh"
+load_dotenv .env
 
-usage() {
-    echo "Usage: $0 {start|init|stop|status}"
-    echo ""
-    echo "  start   Start PostgreSQL container and initialize schema"
-    echo "  init    Initialize database and apply docker/init.sql"
-    echo "  stop    Stop PostgreSQL container"
-    echo "  status  Check PostgreSQL connection status"
-    exit 1
+: "${POSTGRES_DB:?POSTGRES_DB is required in .env}"
+: "${POSTGRES_USER:?POSTGRES_USER is required in .env}"
+: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required in .env}"
+: "${DOMAIN:?DOMAIN is required in .env}"
+
+POSTGRES_HOST="${POSTGRES_HOST:-localhost}"
+POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+APP_PORT="${APP_PORT:-5050}"
+EMAIL="${CERTBOT_EMAIL:-${EMAIL:-${COMPANY_EMAIL:-admin@example.com}}}"
+NGINX_CONF="/etc/nginx/sites-available/${DOMAIN}"
+ESCAPED_PASS="${POSTGRES_PASSWORD//\'/\'\'}"
+
+if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+  echo "Run with sudo: sudo bash mypostgresql.sh" >&2
+  exit 1
+fi
+
+echo "==> Ensuring PostgreSQL is installed..."
+export DEBIAN_FRONTEND=noninteractive
+if ! command -v psql >/dev/null 2>&1; then
+  apt-get update -qq
+  apt-get install -y postgresql postgresql-contrib
+fi
+systemctl enable postgresql
+systemctl start postgresql
+
+PG_CONF="$(find /etc/postgresql -name postgresql.conf 2>/dev/null | head -1)"
+PG_HBA="$(find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1)"
+
+if [[ -n "${PG_CONF}" ]]; then
+  echo "==> Configuring PostgreSQL to accept Docker connections..."
+  sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" "${PG_CONF}" || true
+  if ! grep -q "^listen_addresses = '\*'" "${PG_CONF}"; then
+    echo "listen_addresses = '*'" >> "${PG_CONF}"
+  fi
+fi
+
+if [[ -n "${PG_HBA}" ]]; then
+  if ! grep -q "# claid docker" "${PG_HBA}"; then
+    cat >> "${PG_HBA}" <<'HBA'
+
+# claid docker
+host    all             all             172.16.0.0/12           scram-sha-256
+host    all             all             172.17.0.0/16           scram-sha-256
+HBA
+  fi
+fi
+
+systemctl restart postgresql
+
+echo "==> Creating role '${POSTGRES_USER}' and database '${POSTGRES_DB}'..."
+sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${POSTGRES_USER}') THEN
+    CREATE ROLE ${POSTGRES_USER} LOGIN PASSWORD '${ESCAPED_PASS}';
+  ELSE
+    ALTER ROLE ${POSTGRES_USER} WITH LOGIN PASSWORD '${ESCAPED_PASS}';
+  END IF;
+END
+\$\$;
+
+SELECT 'CREATE DATABASE ${POSTGRES_DB} OWNER ${POSTGRES_USER}'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${POSTGRES_DB}')\gexec
+
+ALTER DATABASE ${POSTGRES_DB} OWNER TO ${POSTGRES_USER};
+GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB} TO ${POSTGRES_USER};
+SQL
+
+sudo -u postgres psql -v ON_ERROR_STOP=1 -d "${POSTGRES_DB}" <<SQL
+GRANT ALL ON SCHEMA public TO ${POSTGRES_USER};
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${POSTGRES_USER};
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${POSTGRES_USER};
+SQL
+
+echo "==> Testing login as ${POSTGRES_USER}..."
+PGPASSWORD="${POSTGRES_PASSWORD}" psql -h 127.0.0.1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "SELECT 1;" >/dev/null
+
+echo "==> Writing Nginx site config for ${DOMAIN} -> 127.0.0.1:${APP_PORT}..."
+cat > "${NGINX_CONF}" <<NGINX
+server {
+    listen 80;
+    server_name ${DOMAIN} www.${DOMAIN};
+
+    client_max_body_size 10M;
+
+    location / {
+        proxy_pass http://127.0.0.1:${APP_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 120s;
+    }
 }
+NGINX
 
-db_container_running() {
-    docker compose ps db --status running -q 2>/dev/null | grep -q .
-}
+ln -sf "${NGINX_CONF}" "/etc/nginx/sites-enabled/${DOMAIN}"
+nginx -t
+systemctl reload nginx
 
-run_psql() {
-    if db_container_running; then
-        docker compose exec -T db psql -U "$DB_USER" "$@"
-    else
-        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$@"
-    fi
-}
+DB_URL="$(python3 "${ROOT}/scripts/print_database_url.py")"
 
-wait_for_postgres() {
-    echo "Waiting for PostgreSQL..."
-    for _ in $(seq 1 30); do
-        if db_container_running; then
-            if docker compose exec -T db pg_isready -U "$DB_USER" -d "$DB_NAME" > /dev/null 2>&1; then
-                echo "PostgreSQL is ready."
-                return 0
-            fi
-        elif command -v pg_isready > /dev/null 2>&1; then
-            if pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" > /dev/null 2>&1; then
-                echo "PostgreSQL is ready."
-                return 0
-            fi
-        fi
-        sleep 2
-    done
-    echo "PostgreSQL did not become ready in time."
-    exit 1
-}
+echo ""
+echo "PostgreSQL ready."
+echo "  Host     : ${POSTGRES_HOST}:${POSTGRES_PORT}"
+echo "  Database : ${POSTGRES_DB}"
+echo "  User     : ${POSTGRES_USER}"
+echo ""
+echo "Set this in .env as DATABASE_URL:"
+echo "  ${DB_URL}"
+echo ""
+echo "Nginx proxy: http://${DOMAIN} -> http://127.0.0.1:${APP_PORT}"
+echo "Deploy app:  bash deployment.sh"
 
-create_database() {
-    local exists
-    exists=$(run_psql -tAc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'" postgres)
+if [[ "${INSTALL_SSL:-false}" == "true" ]]; then
+  echo "==> Installing Let's Encrypt certificate..."
+  apt-get install -y certbot python3-certbot-nginx
+  certbot --nginx \
+    -d "${DOMAIN}" -d "www.${DOMAIN}" \
+    --non-interactive --agree-tos -m "${EMAIL}" \
+    --redirect
+  systemctl reload nginx
+  echo "SSL enabled for ${DOMAIN}"
+fi
 
-    if [ "$exists" != "1" ]; then
-        echo "Creating database '${DB_NAME}'..."
-        run_psql -c "CREATE DATABASE ${DB_NAME};" postgres
-    else
-        echo "Database '${DB_NAME}' already exists."
-    fi
-}
-
-apply_schema() {
-    echo "Applying schema from docker/init.sql..."
-    if db_container_running; then
-        docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < "$INIT_SQL"
-    else
-        run_psql -d "$DB_NAME" -f "$INIT_SQL"
-    fi
-    echo "Schema applied successfully."
-}
-
-start_db() {
-    echo "Starting PostgreSQL container..."
-    docker compose up -d db
-    wait_for_postgres
-    create_database
-    apply_schema
-}
-
-init_db() {
-    wait_for_postgres
-    create_database
-    apply_schema
-}
-
-stop_db() {
-    echo "Stopping PostgreSQL container..."
-    docker compose stop db
-}
-
-check_status() {
-    wait_for_postgres
-    echo "Connected to database '${DB_NAME}'."
-    run_psql -d "$DB_NAME" -c "\dt"
-}
-
-case "${1:-}" in
-    start) start_db ;;
-    init) init_db ;;
-    stop) stop_db ;;
-    status) check_status ;;
-    *) usage ;;
-esac
+echo ""
+echo "Setup complete."
